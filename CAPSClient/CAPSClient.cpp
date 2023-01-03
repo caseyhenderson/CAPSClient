@@ -18,7 +18,7 @@ int readNumber;
 int postCount;
 int readCount;
 int time;
-
+bool timerRunning;
 
 string generateRequest(string type)
 {
@@ -45,14 +45,15 @@ void clientThreadFunction(string requestType)
 		std::string request;
 		client.OpenConnection();
 		request = generateRequest(requestType);
-		// timer starts here maybe? or just out of the loop. When we hit the time, request should change to 'exit'
-// then decide what it's gonna be here
+
 		do {
-				// barrier stuff here with timer
+				// barrier
+				// timer
 				std::cout << "String sent: " << request << std::endl;
 				std::cout << "Bytes sent: " << request.size() << std::endl;
 
 				std::string reply = client.send(request);
+				// timer should start here, I think?
 				if (requestType == "POST")
 				{
 						postCount++;
@@ -107,11 +108,13 @@ int main(int argc, char** argv)
 		for (int i = 0; i < postNumber; i++)
 		{
 				clientThreads.emplace_back(clientThreadFunction, "POST");
+				cout << "Post Thread " << to_string(i) << " sent" << endl;
 				// can do type check here with second parameter
 		}
 		for (int i = 0; i < readNumber; i++)
 		{
 				clientThreads.emplace_back(clientThreadFunction, "READ");
+				cout << "Read Thread " << to_string(i) << " sent" << endl;
 		}
 		for (auto& th : clientThreads)
 				th.join();
