@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <thread>
 #include "TCPClient.h"
 
 #define DEFAULT_PORT 12345
@@ -12,6 +13,11 @@ using namespace std;
 const string usefulStrings[7] = { "a", "b", "c", "d", "e", "f", "g"};
 map<string, vector<string>> postmap;
 map<string, vector<string>> readmap;
+int postNumber;
+int readNumber;
+int postCount;
+int readCount;
+int time;
 
 
 string generateRequest(string type)
@@ -33,11 +39,37 @@ string generateRequest(string type)
 
 // these then go into a map I guess?
 
+void clientThreadFunction(string requestType)
+{
+		TCPClient client("127.0.0.1", DEFAULT_PORT);
+		std::string request;
+		client.OpenConnection();
+		request = generateRequest(requestType);
+		// timer starts here maybe? or just out of the loop. When we hit the time, request should change to 'exit'
+// then decide what it's gonna be here
+		do {
+				// barrier stuff here with timer
+				std::cout << "String sent: " << request << std::endl;
+				std::cout << "Bytes sent: " << request.size() << std::endl;
 
+				std::string reply = client.send(request);
+				if (requestType == "POST")
+				{
+						postCount++;
+				}
+				else
+				{
+						readCount++;
+				}
+				std::cout << "String returned: " << reply << std::endl;
+				std::cout << "Bytes received: " << reply.size() << std::endl;
+		} while (request != "exit" && request != "EXIT");
+		client.CloseConnection();
+
+}
 
 int main(int argc, char** argv)
 {
-		std::cout << argv[0] << std::endl << argv[1]; 
 		// vector of the client threads
 		// number of requests, seconds of requests, numbers of clients
 		// threadClient function
@@ -54,7 +86,7 @@ int main(int argc, char** argv)
 				return 1;
 		}
 		// how do barriers
-		// how do timers
+		// how do timers - queryperformancecounter
 		// what can we get done on the client?
 
 		// TODO Client: Replicate the reference client's function
@@ -67,10 +99,64 @@ int main(int argc, char** argv)
 
 		// randomly generate requests here for POST, READ
 		// need methods to do this so they can be called to generate x amount
+		vector<thread> clientThreads;
+		postNumber = 5;
+		readNumber = 5;
 
 
-		TCPClient client(argv[1], DEFAULT_PORT);
-		std::string request;
+		for (int i = 0; i < postNumber; i++)
+		{
+				clientThreads.emplace_back(clientThreadFunction, "POST");
+				// can do type check here with second parameter
+		}
+		for (int i = 0; i < readNumber; i++)
+		{
+				clientThreads.emplace_back(clientThreadFunction, "READ");
+		}
+		for (auto& th : clientThreads)
+				th.join();
+		cout << "Number of post requests: " + to_string(postCount) << endl << "Number of read requests: " + to_string(readCount) << endl;
+		TCPClient finalClient("127.0.0.1", DEFAULT_PORT);
+		finalClient.OpenConnection();
+		finalClient.send("exit");
+		finalClient.CloseConnection();
+
+
+		return 0;
+}
+
+//std::cout << "Enter string to send to server or \"exit\" (without quotes to terminate): ";
+// std::getline(std::cin, request);
+
+// if like ref client, we need to spit out every second the number of requests, for each thread
+
+// Example RefOutput:
+//TYPE thread X sent:
+//Second 0: 10671 requests.
+//		Second 1 : 10697 requests.
+//		Second 2 : 10596 requests.
+//		Second 3 : 10180 requests.
+//		Second 4 : 10153 requests.
+//		Second 5 : 10676 requests.
+//		Second 6 : 10216 requests.
+//		Second 7 : 10379 requests.
+//		Second 8 : 10325 requests.
+//		Second 9 : 10331 requests.
+//		Average : 10422.3 requests.
+//		Runtime : 10.0001 seconds.
+
+//		Total poster requests : 213034.
+//		Average requests per poster thread : 106517.
+//		Total reader requests : 210404.
+//		Average requests per reader thread : 105202.
+//		Total requests : 423438.
+//		Average requests per thread : 105859.
+//		Average requests per thread per second : 10585.9.
+
+
+		// exit? 
+
+
 
 		// if (post_request)
 		// generate random post requests
@@ -86,24 +172,20 @@ int main(int argc, char** argv)
 		// th.join();
 		// vector of clientThreads / postThreads / readThreads
 
-		client.OpenConnection();
 
-		do {
-				request = "";
-				// then decide what it's gonna be here
-				std::cout << "Enter string to send to server or \"exit\" (without quotes to terminate): ";
-				std::getline(std::cin, request);
+		// Barrier stuff is in undirected, already got
+		// Figure out how to generate m and n number of threads
+		// Where do locks go? when accessing DS I guess
+		// to presumably grab a request to use from
+		// Throtttling?
 
-				std::cout << "String sent: " << request << std::endl;
-				std::cout << "Bytes sent: " << request.size() << std::endl;
+		// and timer - take number of seconds, use it to inform how long to generate requests for
+		// so iterate through map of post / read requests for x seconds
+		// for x seconds
+		// generatePostRequest (from map)
+		// generateReadRequest (from map)
+		// etc.
+		// map<string, vector<string >>::iterator it(postmap.find(request.getTopicId()));
 
-				std::string reply = client.send(request);
-
-				std::cout << "String returned: " << reply << std::endl;
-				std::cout << "Bytes received: " << reply.size() << std::endl;
-		} while (request != "exit" && request != "EXIT");
-
-		client.CloseConnection();
-
-		return 0;
-}
+		// could also have a counter to manage this functionality. might not need DS
+		// COUNT OF replies we get back / requests you get back.
